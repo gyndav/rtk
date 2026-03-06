@@ -6,7 +6,6 @@ strip_lines_matching = [
   "^\\s*$",
   "^sending incremental file list",
   "^sent \\d",
-  "^total size is \\d",
 ]
 match_output = [
   { pattern = "total size is", message = "ok (synced)" },

@@ -6,7 +6,6 @@ strip_lines_matching = [
   "^\\s*$",
   "^Compiling ",
   "^Linking ",
-  "^Build complete!",
 ]
 match_output = [
   { pattern = "Build complete!", message = "ok (build complete)" },

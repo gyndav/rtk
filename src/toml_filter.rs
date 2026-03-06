@@ -1427,7 +1427,7 @@ match_command = "^make\\b"
             "pio-run",
             "poetry-install",
             "pre-commit",
-            "ps-aux",
+            "ps",
             "quarto-render",
             "rsync",
             "shellcheck",
