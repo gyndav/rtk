@@ -76,6 +76,10 @@ pub fn classify_command(cmd: &str) -> Classification {
         return Classification::Ignored;
     }
 
+    // Normalize absolute binary paths: /usr/bin/grep → grep (#485)
+    let cmd_normalized = strip_absolute_path(cmd_clean);
+    let cmd_clean = cmd_normalized.as_str();
+
     // Exclude cat/head/tail with redirect operators — these are writes, not reads (#315)
     if cmd_clean.starts_with("cat ")
         || cmd_clean.starts_with("head ")
@@ -260,6 +264,29 @@ pub fn split_command_chain(cmd: &str) -> Vec<&str> {
     }
 
     results
+}
+
+/// Normalize absolute binary paths: `/usr/bin/grep -rn foo` → `grep -rn foo` (#485)
+/// Only strips if the first word contains a `/` (Unix path).
+fn strip_absolute_path(cmd: &str) -> String {
+    let first_space = cmd.find(' ');
+    let first_word = match first_space {
+        Some(pos) => &cmd[..pos],
+        None => cmd,
+    };
+    if first_word.contains('/') {
+        // Extract basename
+        let basename = first_word.rsplit('/').next().unwrap_or(first_word);
+        if basename.is_empty() {
+            return cmd.to_string();
+        }
+        match first_space {
+            Some(pos) => format!("{}{}", basename, &cmd[pos..]),
+            None => basename.to_string(),
+        }
+    } else {
+        cmd.to_string()
+    }
 }
 
 /// Check if a command has RTK_DISABLED= prefix in its env prefix portion.
@@ -1940,5 +1967,68 @@ mod tests {
             "cargo test"
         );
         assert_eq!(strip_disabled_prefix("git status"), "git status");
+    }
+
+    // --- #485: absolute path normalization ---
+
+    #[test]
+    fn test_classify_absolute_path_grep() {
+        assert_eq!(
+            classify_command("/usr/bin/grep -rni pattern"),
+            Classification::Supported {
+                rtk_equivalent: "rtk grep",
+                category: "Files",
+                estimated_savings_pct: 75.0,
+                status: RtkStatus::Existing,
+            }
+        );
+    }
+
+    #[test]
+    fn test_classify_absolute_path_ls() {
+        assert_eq!(
+            classify_command("/bin/ls -la"),
+            Classification::Supported {
+                rtk_equivalent: "rtk ls",
+                category: "Files",
+                estimated_savings_pct: 65.0,
+                status: RtkStatus::Existing,
+            }
+        );
+    }
+
+    #[test]
+    fn test_classify_absolute_path_git() {
+        assert_eq!(
+            classify_command("/usr/local/bin/git status"),
+            Classification::Supported {
+                rtk_equivalent: "rtk git",
+                category: "Git",
+                estimated_savings_pct: 70.0,
+                status: RtkStatus::Existing,
+            }
+        );
+    }
+
+    #[test]
+    fn test_classify_absolute_path_no_args() {
+        // /usr/bin/find alone → still classified
+        assert_eq!(
+            classify_command("/usr/bin/find ."),
+            Classification::Supported {
+                rtk_equivalent: "rtk find",
+                category: "Files",
+                estimated_savings_pct: 70.0,
+                status: RtkStatus::Existing,
+            }
+        );
+    }
+
+    #[test]
+    fn test_strip_absolute_path_helper() {
+        assert_eq!(strip_absolute_path("/usr/bin/grep -rn foo"), "grep -rn foo");
+        assert_eq!(strip_absolute_path("/bin/ls -la"), "ls -la");
+        assert_eq!(strip_absolute_path("grep -rn foo"), "grep -rn foo");
+        assert_eq!(strip_absolute_path("/usr/local/bin/git"), "git");
     }
 }
