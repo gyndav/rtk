@@ -108,9 +108,11 @@ fn filter_pytest_output(output: &str) -> String {
                 current_failure.clear();
             }
             continue;
-        } else if trimmed.starts_with("===")
-            && (trimmed.contains("passed") || trimmed.contains("failed"))
+        } else if (trimmed.contains("passed") || trimmed.contains("failed"))
+            && (trimmed.starts_with("===")
+                || trimmed.chars().next().is_some_and(|c| c.is_ascii_digit()))
         {
+            // Matches both "=== 5 passed in 0.50s ===" and "5 failed, 1698 passed" (pytest -q)
             summary_line = trimmed.to_string();
             continue;
         }
@@ -366,6 +368,31 @@ collected 0 items
         assert_eq!(
             parse_summary_line("=== 3 passed, 1 failed, 2 skipped in 1.0s ==="),
             (3, 1, 2)
+        );
+    }
+
+    #[test]
+    fn test_filter_pytest_quiet_mode() {
+        // pytest -q outputs summary without === markers
+        let output = "..F..x..\n5 failed, 1698 passed, 2 skipped\n";
+        let result = filter_pytest_output(output);
+        assert!(
+            result.contains("1698 passed"),
+            "Should parse quiet summary: got {}",
+            result
+        );
+        assert!(
+            result.contains("5 failed"),
+            "Should parse quiet failures: got {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_parse_summary_quiet_format() {
+        assert_eq!(
+            parse_summary_line("5 failed, 1698 passed, 2 skipped"),
+            (1698, 5, 2)
         );
     }
 }
