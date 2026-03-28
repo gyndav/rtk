@@ -15,10 +15,10 @@ pub struct RtkRule {
 
 // Patterns ordered to match RULES indices exactly.
 pub const PATTERNS: &[&str] = &[
-    r"^git\s+(?:-[Cc]\s+\S+\s+)*(status|log|diff|show|add|commit|push|pull|branch|fetch|stash|worktree)",
+    r"^git\s+(?:-[Cc]\s+\S+\s+)*(status|log|diff|show|add|commit|push|pull|branch|fetch|stash|worktree|checkout|merge|rebase)",
     r"^gh\s+(pr|issue|run|repo|api|release)",
-    r"^cargo\s+(build|test|clippy|check|fmt|install)",
-    r"^pnpm\s+(list|ls|outdated|install)",
+    r"^cargo\s+(build|test|clippy|check|fmt|install|run|publish)",
+    r"^pnpm\s+(list|ls|outdated|install|build|exec)",
     r"^npm\s+(run|exec)",
     r"^npx\s+",
     r"^(cat|head|tail)\s+",
@@ -102,7 +102,11 @@ pub const RULES: &[RtkRule] = &[
             ("add", 59.0),
             ("commit", 59.0),
         ],
-        subcmd_status: &[],
+        subcmd_status: &[
+            ("checkout", RtkStatus::Passthrough),
+            ("merge", RtkStatus::Passthrough),
+            ("rebase", RtkStatus::Passthrough),
+        ],
     },
     RtkRule {
         rtk_cmd: "rtk gh",
@@ -118,7 +122,11 @@ pub const RULES: &[RtkRule] = &[
         category: "Cargo",
         savings_pct: 80.0,
         subcmd_savings: &[("test", 90.0), ("check", 80.0)],
-        subcmd_status: &[("fmt", RtkStatus::Passthrough)],
+        subcmd_status: &[
+            ("fmt", RtkStatus::Passthrough),
+            ("run", RtkStatus::Passthrough),
+            ("publish", RtkStatus::Passthrough),
+        ],
     },
     RtkRule {
         rtk_cmd: "rtk pnpm",
@@ -126,7 +134,10 @@ pub const RULES: &[RtkRule] = &[
         category: "PackageManager",
         savings_pct: 80.0,
         subcmd_savings: &[],
-        subcmd_status: &[],
+        subcmd_status: &[
+            ("build", RtkStatus::Passthrough),
+            ("exec", RtkStatus::Passthrough),
+        ],
     },
     RtkRule {
         rtk_cmd: "rtk npm",

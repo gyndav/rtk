@@ -890,9 +890,8 @@ mod tests {
 
     #[test]
     fn test_registry_covers_all_cargo_subcommands() {
-        // Verify that every CargoCommand variant (Build, Test, Clippy, Check, Fmt)
-        // except Other has a matching pattern in the registry
-        for subcmd in ["build", "test", "clippy", "check", "fmt"] {
+        // Verify that every CargoCommand variant except Other has a matching pattern
+        for subcmd in ["build", "test", "clippy", "check", "fmt", "run", "publish"] {
             let cmd = format!("cargo {subcmd}");
             match classify_command(&cmd) {
                 Classification::Supported { .. } => {}
@@ -906,7 +905,7 @@ mod tests {
         // Verify that every GitCommand subcommand has a matching pattern
         for subcmd in [
             "status", "log", "diff", "show", "add", "commit", "push", "pull", "branch", "fetch",
-            "stash", "worktree",
+            "stash", "worktree", "checkout", "merge", "rebase",
         ] {
             let cmd = format!("git {subcmd}");
             match classify_command(&cmd) {
@@ -2347,5 +2346,131 @@ mod tests {
         assert_eq!(strip_git_global_opts("git --no-pager log"), "git log");
         assert_eq!(strip_git_global_opts("git status"), "git status");
         assert_eq!(strip_git_global_opts("cargo test"), "cargo test");
+    }
+
+    // Passthrough subcommand coverage: discover should classify these as Supported
+    // (routing to passthrough handlers) rather than "TOP UNHANDLED COMMANDS".
+
+    #[test]
+    fn test_classify_git_checkout_passthrough() {
+        assert_eq!(
+            classify_command("git checkout main"),
+            Classification::Supported {
+                rtk_equivalent: "rtk git",
+                category: "Git",
+                estimated_savings_pct: 70.0,
+                status: RtkStatus::Passthrough,
+            }
+        );
+    }
+
+    #[test]
+    fn test_classify_git_merge_passthrough() {
+        assert_eq!(
+            classify_command("git merge feature/my-branch"),
+            Classification::Supported {
+                rtk_equivalent: "rtk git",
+                category: "Git",
+                estimated_savings_pct: 70.0,
+                status: RtkStatus::Passthrough,
+            }
+        );
+    }
+
+    #[test]
+    fn test_classify_git_rebase_passthrough() {
+        assert_eq!(
+            classify_command("git rebase origin/main"),
+            Classification::Supported {
+                rtk_equivalent: "rtk git",
+                category: "Git",
+                estimated_savings_pct: 70.0,
+                status: RtkStatus::Passthrough,
+            }
+        );
+    }
+
+    #[test]
+    fn test_classify_cargo_run_passthrough() {
+        assert_eq!(
+            classify_command("cargo run -- verify"),
+            Classification::Supported {
+                rtk_equivalent: "rtk cargo",
+                category: "Cargo",
+                estimated_savings_pct: 80.0,
+                status: RtkStatus::Passthrough,
+            }
+        );
+    }
+
+    #[test]
+    fn test_classify_cargo_publish_passthrough() {
+        assert_eq!(
+            classify_command("cargo publish -p my-crate"),
+            Classification::Supported {
+                rtk_equivalent: "rtk cargo",
+                category: "Cargo",
+                estimated_savings_pct: 80.0,
+                status: RtkStatus::Passthrough,
+            }
+        );
+    }
+
+    #[test]
+    fn test_classify_pnpm_build_passthrough() {
+        assert_eq!(
+            classify_command("pnpm build"),
+            Classification::Supported {
+                rtk_equivalent: "rtk pnpm",
+                category: "PackageManager",
+                estimated_savings_pct: 80.0,
+                status: RtkStatus::Passthrough,
+            }
+        );
+    }
+
+    #[test]
+    fn test_classify_pnpm_exec_passthrough() {
+        assert_eq!(
+            classify_command("pnpm exec eslint --max-warnings=0"),
+            Classification::Supported {
+                rtk_equivalent: "rtk pnpm",
+                category: "PackageManager",
+                estimated_savings_pct: 80.0,
+                status: RtkStatus::Passthrough,
+            }
+        );
+    }
+
+    #[test]
+    fn test_rewrite_git_checkout() {
+        assert_eq!(
+            rewrite_command("git checkout main", &[]),
+            Some("rtk git checkout main".to_string())
+        );
+    }
+
+    #[test]
+    fn test_rewrite_git_merge() {
+        assert_eq!(
+            rewrite_command("git merge --no-edit feature", &[]),
+            Some("rtk git merge --no-edit feature".to_string())
+        );
+    }
+
+    #[test]
+    fn test_rewrite_cargo_run() {
+        assert_eq!(
+            rewrite_command("cargo run -- verify", &[]),
+            Some("rtk cargo run -- verify".to_string())
+        );
+    }
+
+    #[test]
+    fn test_rewrite_pnpm_build() {
+        assert_eq!(
+            rewrite_command("pnpm build", &[]),
+            Some("rtk pnpm build".to_string())
+        );
     }
 }
