@@ -151,6 +151,8 @@ rtk pnpm outdated       # Compact outdated packages (80%)
 rtk pnpm install        # Compact install output (90%)
 rtk npm run <script>    # Compact npm script output
 rtk npx <cmd>           # Compact npx command output
+rtk bun <script>        # Compact bun script output
+rtk bunx <cmd>          # Compact bunx command output (tsc, eslint, prisma -> specialized)
 rtk prisma              # Prisma without ASCII art (88%)
 ```
 
@@ -206,7 +208,7 @@ rtk init --global       # Add RTK to ~/.claude/CLAUDE.md
 | Build | next, tsc, lint, prettier | 70-87% |
 | Git | status, log, diff, add, commit | 59-80% |
 | GitHub | gh pr, gh run, gh issue | 26-87% |
-| Package Managers | pnpm, npm, npx | 70-90% |
+| Package Managers | pnpm, npm, npx, bun, bunx | 70-90% |
 | Files | ls, read, grep, find | 60-75% |
 | Infrastructure | docker, kubectl | 85% |
 | Network | curl, wget | 65-70% |
@@ -2426,6 +2428,8 @@ mod tests {
             "rtk prisma",
             "rtk pnpm",
             "rtk npm",
+            "rtk bun",
+            "rtk bunx",
             "rtk curl",
             "rtk git",
             "rtk docker",
